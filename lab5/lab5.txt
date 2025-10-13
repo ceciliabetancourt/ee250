@@ -4,6 +4,9 @@
 - Cecilia Betancourt
 - Leire Lizarralde
 
+## GitHub Repository
+https://github.com/ceciliabetancourt/ee250
+
 ## Lab Question Answers
 ## PART 1
 Question 1: What is dBm? What values are considered good and bad for WiFi signal strength?
