@@ -12,6 +12,10 @@ import socket
 potentiometer = 0
 grovepi.pinMode(potentiometer,"INPUT")
 
+# light sensor connected to analog port A1 as input
+light_sensor = 1
+grovepi.pinMode(light_sensor,"INPUT")
+
 # callback executed when client receives a connection acknowledgement 
 # packet response from the server
 def on_connect(client, userdata, flags, rc):
@@ -46,4 +50,14 @@ if __name__ == '__main__':
         else: # potentiometer_val > 682:
             city = 'London'
         client.publish("lizarral/cityinfo", f"{city}")
+        time.sleep(4)
+        # (3) read light sensor value
+        light_sensor_val = grovepi.analogRead(light_sensor)
+        if light_sensor_val < 341: # since it's from 0-1023, divisions are 0-341, 342-682, 683-1023
+            display = 'a'
+        elif light_sensor_val < 682:
+            display = 'b'
+        else: # light_sensor_val > 682:
+            display = 'c'
+        client.publish("lizarral/displayinfo", f"{display}")
         time.sleep(4)
