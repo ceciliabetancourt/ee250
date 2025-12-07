@@ -4,7 +4,6 @@ import vm_sub
 
 # weatherAPI key
 WEATHER_API_KEY = 'b7332961c3ec4349a4644114252309'
-potentiometer_val = 0 # CHANGE
 
 def get_weather(city):
     # (1) build the API request URL using the base API endpoint, the API key, and the city 
