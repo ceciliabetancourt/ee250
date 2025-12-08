@@ -1,3 +1,4 @@
+# note ––> we're using the following API: https://www.weatherapi.com
 import requests
 import json
 import vm_sub
@@ -17,26 +18,10 @@ def get_weather(city):
 
     # (3) handle HTTP status codes
     if response.status_code == 200: # request was successful
-        # figure out what values we need specifically
-        # current temperature (F)
-        current_temp = json_weather_data['current']['temp_c']
-        # "feels like" temperature
-        feel_temp = json_weather_data['current']['feelslike_c']
-        # weather condition (e.g., sunny, cloudy, rainy)
-        weather_cond = json_weather_data['current']['condition']['text']
-        # humidity percentage
-        humidity = json_weather_data['current']['humidity']
-        # wind speed and direction
-        wind_speed = json_weather_data['current']['wind_kph']
-        direction = json_weather_data['current']['wind_dir']
-        # atmospheric pressure (mb)
-        pressure = json_weather_data['current']['pressure_mb']
-        # UV Index value
-        uv = json_weather_data['current']['uv']
-        # cloud cover percentage
-        cloud = json_weather_data['current']['cloud']
-        # visibility (miles)
-        visibility = json_weather_data['current']['vis_miles']  
+        # latitude
+        latitude = json_weather_data['location']['lat']
+        # longitude
+        longitude = json_weather_data['location']['lon']
     else:
         # request was not successful
         print(f"Error: {response.status_code}. Something went wrong.")
