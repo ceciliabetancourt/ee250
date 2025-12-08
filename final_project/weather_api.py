@@ -1,32 +1,53 @@
-# note ––> we're using the following API: https://www.weatherapi.com
 import requests
-import json
-import vm_sub
+import pandas as pd
+from datetime import datetime, timedelta
+import vm_pub
 
-# weatherAPI key
-WEATHER_API_KEY = 'b7332961c3ec4349a4644114252309'
+CITY_COORDS = {
+    "Los Angeles": (34.0522, -118.2437),
+    "Madrid":      (40.4168, -3.7038),
+    "London":      (51.5074, -0.1278),
+}
 
-def get_weather(city):
-    # (1) build the API request URL using the base API endpoint, the API key, and the city 
-    # chosen with the potentiometer
-    API_BASE_URL = 'https://api.weatherapi.com/v1/current.json'
-    request_url = f"{API_BASE_URL}?key={WEATHER_API_KEY}&q={city}"
+def c_to_f(celsius):
+    return (celsius * 9/5) + 32
 
-    # (2) make the HTTP request to fetch weather data using the 'requests' library
-    response = requests.get(request_url)
-    json_weather_data = response.json()
+# pull recent weather for model to use
+def get_weather_history(latitude, longitude, days=60):
+    # use yesterday as end so we only use fully observed days
+    end = datetime.now().date() - timedelta(days=1)
+    start = end - timedelta(days=days - 1)
 
-    # (3) handle HTTP status codes
-    if response.status_code == 200: # request was successful
-        # latitude
-        latitude = json_weather_data['location']['lat']
-        # longitude
-        longitude = json_weather_data['location']['lon']
-    else:
-        # request was not successful
-        print(f"Error: {response.status_code}. Something went wrong.")
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start.strftime("%Y-%m-%d"),
+        "end_date": end.strftime("%Y-%m-%d"),
+        "daily": "temperature_2m_max",
+        "timezone": "America/Los_Angeles",
+    }
 
-if __name__ == '__main__':
-    # call the 'get_weather' function with the city name published in the broker
-    get_weather(vm_sub.latest_city)
-    pass
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    df = pd.DataFrame({
+        "date": data["daily"]["time"],
+        "temp": data["daily"]["temperature_2m_max"],
+    })
+
+    # convert types
+    df["date"] = pd.to_datetime(df["date"])
+    df["temp"] = df["temp"].apply(c_to_f)  # store in farhenheit
+
+    return df
+
+# function for getting info for weather_prediction.py
+def get_weather_history_from_city(days=60):
+    city_name = vm_pub.latest_city
+    lat, lon = CITY_COORDS[city_name]
+    return get_weather_history(lat, lon, days=days)
+
+if __name__ == "__main__":
+    df_la = get_weather_history_for_city(days=10)
+    print(df_la)
