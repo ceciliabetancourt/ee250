@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
-import vm_pub
+import vm_sub
 
 CITY_COORDS = {
     "Los Angeles": (34.0522, -118.2437),
@@ -15,7 +15,8 @@ def c_to_f(celsius):
 # pull recent weather for model to use
 def get_weather_history(latitude, longitude, days=60):
     # use yesterday as end so we only use fully observed days
-    end = datetime.now().date() - timedelta(days=1)
+    days = int(days)
+    end = datetime.now() - timedelta(days=1)
     start = end - timedelta(days=days - 1)
 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -38,16 +39,22 @@ def get_weather_history(latitude, longitude, days=60):
 
     # convert types
     df["date"] = pd.to_datetime(df["date"])
-    df["temp"] = df["temp"].apply(c_to_f)  # store in farhenheit
+    df["temp"] = df["temp"].apply(c_to_f)  # store in farhenheit :)
 
     return df
 
 # function for getting info for weather_prediction.py
-def get_weather_history_from_city(days=60):
-    city_name = vm_pub.latest_city
+def get_weather_history_for_city(city_name, days=60):
+    if city_name is None:
+        vm_sub.start_mqtt(background=True)
+        city_name = vm_sub.wait_for_city(timeout=10)
+
+        if city_name is None:
+            raise RuntimeError("Timed out waiting for city from MQTT")
     lat, lon = CITY_COORDS[city_name]
     return get_weather_history(lat, lon, days=days)
 
 if __name__ == "__main__":
-    df_la = get_weather_history_for_city(days=10)
+    city_name = None
+    df_la = get_weather_history_for_city(city_name, days=10)
     print(df_la)
