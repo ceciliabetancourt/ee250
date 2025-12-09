@@ -11,7 +11,7 @@ MODELS_DIR = "models"
 CITY_LIST = ["Los Angeles", "Madrid", "London"]
 
 # host, broker port number, and then topic name
-BROKER_ADDRESS = "localhost"
+BROKER_ADDRESS = "test.mosquitto.org"
 BROKER_PORT = 1883
 PREDICTION_TOPIC = "weather/prediction"
 
@@ -19,7 +19,7 @@ PREDICTION_TOPIC = "weather/prediction"
 def name_convert(name: str) -> str:
     return name.lower().replace(" ", "_")
 
-def load_models(models_dir=MODELS_DIR):
+def load_models(models_dir=MODELS_DIR): # (AIDED BY CHATGPT)
     models = {}
 
     for city in CITY_LIST:
@@ -51,7 +51,7 @@ def predict_for_city(city_name):
     if city_name not in MODELS:
         raise ValueError(f"No model configured for city: {city_name}")
 
-    df = get_weather_history_for_city(city_name)  # df must have 'temp' in °F
+    df = get_weather_history_for_city(city_name, days=60)  # df must have 'temp' in °F
 
     X_input = build_features_from_weather_df(df, window=7)
 
@@ -69,6 +69,7 @@ def predict_for_city(city_name):
 def publish_prediction(city, predicted_temp):
     client = mqtt.Client()
     client.connect(BROKER_ADDRESS, BROKER_PORT, keepalive=60)
+    client.loop_start()
 
     payload = {
         "city": city,
@@ -77,11 +78,18 @@ def publish_prediction(city, predicted_temp):
     }
 
     client.publish(PREDICTION_TOPIC, json.dumps(payload))
+    client.loop_stop()
     client.disconnect()
 
 def main():
     # read the latest city chosen by vm_sub
-    city = getattr(vm_sub, "latest_city", None)
+    vm_sub.start_mqtt(background=True)
+
+    # block until we have a city (or timeout)
+    city = vm_sub.wait_for_city(timeout=10)
+    if city is None:
+        print("No city received from MQTT; exiting.")
+        return
 
     print(f"Latest city from vm_sub: {city}")
 
@@ -89,8 +97,9 @@ def main():
     predicted_temp = predict_for_city(city)
     print(f"Predicted temperature for {city}: {predicted_temp:.2f} °F")
 
-    # publish to MQTT
+    # publish to MQTT!
     publish_prediction(city, predicted_temp)
 
 if __name__ == "__main__":
     main()
+    
