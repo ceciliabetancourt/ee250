@@ -20,29 +20,27 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
-# SPECIFIALLY FOR MAKING MULTIPLE MODELS
+# specifically for making multiple models :)
 import os
 from joblib import dump
 
-"""## **Pull From API**"""
-
+# (1) pull from apis
 CITY_COORDS = {
     "Los Angeles": (34.0522, -118.2437),
     "Madrid":      (40.4168, -3.7038),
     "London":      (51.5074, -0.1278),
 }
 
-# API is in celsius, swap to fahrenheit
+# since api is in celsius, we swap to fahrenheit
 def c_to_f(celsius):
     return (celsius * 9/5) + 32
 
-# Pull from API
-# We pull 60 days for a good span of data but we keep a window focused (as shown
+# essentially, we pull 60 days for a good span of data but we keep a window focused (as shown
 # later in dataset function) on the past 7 days
 def get_weather_history(latitude, longitude, days=60):
-    end = datetime.now().date() - timedelta(days=1) # Today (API is in diff timezone)
+    end = datetime.now().date() - timedelta(days=1) # today (since the api is in diff timezone)
 
-    # Start 'days-1' before end so total rows = `days`
+    # start 'days-1' before end so total rows = `days`
     start = end - timedelta(days=days-1)
 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -63,10 +61,10 @@ def get_weather_history(latitude, longitude, days=60):
        "temp": data["daily"]["temperature_2m_max"]
     })
 
-    # Convert to datetime
+    # convert to datetime
     df["date"] = pd.to_datetime(df["date"])
 
-    # Convert Celsius → Fahrenheit
+    # convert celsius –> fahrenheit
     df["temp"] = df["temp"].apply(c_to_f)
 
     return df
@@ -74,8 +72,7 @@ def get_weather_history(latitude, longitude, days=60):
 def convert_name(name: str) -> str:
     return name.lower().replace(" ", "_")
 
-"""## **Make the Dataset**"""
-
+# (2) make the dataset
 def make_regression_dataset(series, window=7):
     X = []
     y = []
@@ -84,8 +81,8 @@ def make_regression_dataset(series, window=7):
         y.append(series[i])
     return np.array(X), np.array(y)
 
-"""## **Build, Train, and Test**"""
-
+# (3) build, train, and test!
+# (AIDED BY CHATGPT)
 def train_city_model(city_name, lat, lon, days=60, window=7):
     df = get_weather_history(lat, lon, days=days)
     temps = df["temp"].values
@@ -97,7 +94,7 @@ def train_city_model(city_name, lat, lon, days=60, window=7):
         X, y, test_size=0.2, shuffle=False
     )
 
-    # For this ML, we don't need to use epochs to train since our model solves
+    # for this ML, we don't need to use epochs to train since our model solves
     # in one step (using linear regression)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
@@ -106,15 +103,14 @@ def train_city_model(city_name, lat, lon, days=60, window=7):
     model = LinearRegression()
     model.fit(X_train_scaled, y_train)
 
-    # Check accuracy
+    # check accuracy
     y_pred = model.predict(X_test_scaled)
     mae = np.mean(np.abs(y_test - y_pred))
     print(f"{city_name}: MAE on test set = {mae:.2f} °F")
 
     return model, scaler
 
-"""## **Evaluate the Model**"""
-
+# (4) evaluate the model
 def train_and_save_all_models(output_dir="models", days=60, window=7):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -130,3 +126,4 @@ def train_and_save_all_models(output_dir="models", days=60, window=7):
 
 if __name__ == "__main__":
     train_and_save_all_models()
+    
